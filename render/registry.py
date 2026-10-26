@@ -3,17 +3,24 @@
 from __future__ import annotations
 
 from render.base import Skin
-from render.skins_dial import ClassicSkin, MinimalSkin, RomanSkin, SubdialSkin, WallSkin
+from render.skins_dial import (
+    ClassicSkin, CompassSkin, DotsSkin, MinimalSkin, PocketSkin, RomanSkin,
+    SubdialSkin, SunburstSkin, WallSkin,
+)
 from render.skins_digital import GlassSkin, NeonSkin, SplitSkin, TerminalSkin
 from render.skins_shape import FlipSkin, RingSkin, SegmentSkin, WorldSkin
 
-# 顺序即设置面板里的展示顺序：先浅色数字，再指针，再图形，最后深色
+# 顺序即设置面板里的展示顺序：先浅色数字，再圆形指针，再图形，最后深色
 SKINS: list[Skin] = [
     GlassSkin(),
     ClassicSkin(),
     WallSkin(),
+    CompassSkin(),
+    PocketSkin(),
+    SunburstSkin(),
     RomanSkin(),
     MinimalSkin(),
+    DotsSkin(),
     SubdialSkin(),
     RingSkin(),
     SegmentSkin(),
