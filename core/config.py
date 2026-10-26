@@ -8,6 +8,8 @@ import os
 import sys
 import threading
 
+from core import i18n
+
 APP_NAME = "DesktopClock"
 
 
@@ -22,6 +24,7 @@ CONFIG_PATH = os.path.join(app_dir(), "config.json")
 
 DEFAULTS = {
     "version": 1,
+    "language": "zh",
     "skin": "glass",
     "theme": "warm",
     "geometry": {
@@ -84,6 +87,26 @@ THEMES = {
 }
 
 THEME_ORDER = ["warm", "ink", "slate", "celadon", "amber", "sakura", "ocean", "plain", "graphite", "paper"]
+
+# 英文界面下的主题名
+THEME_EN = {
+    "warm": "Warm beige",
+    "ink": "Ink black",
+    "slate": "Cool grey",
+    "celadon": "Celadon",
+    "amber": "Amber",
+    "sakura": "Sakura",
+    "ocean": "Deep sea",
+    "plain": "Pure white",
+    "graphite": "Graphite",
+    "paper": "Paper white",
+}
+
+
+def theme_name(key: str) -> str:
+    if i18n.is_en():
+        return THEME_EN.get(key, key)
+    return THEMES[key][0] if key in THEMES else key
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -163,4 +186,7 @@ class Config:
 
     def reset(self) -> None:
         with self._lock:
+            # 界面语言是用户偏好，不该被「恢复默认」顺手改掉
+            keep = self.data.get("language", DEFAULTS["language"])
             self.data = copy.deepcopy(DEFAULTS)
+            self.data["language"] = keep

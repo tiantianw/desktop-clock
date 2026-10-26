@@ -76,6 +76,12 @@ def render_one(cfg, skin, size: int, wall: QColor) -> QPixmap:
 
 def main() -> int:
     app = QApplication(sys.argv)
+    lang = "zh"
+    for arg in sys.argv[1:]:
+        if arg in ("zh", "en"):
+            lang = arg
+    from core import i18n
+    i18n.set_language(lang)
     cfg = Config()
 
     skins = registry.SKINS
@@ -103,7 +109,8 @@ def main() -> int:
                     "%s  (%s)" % (skin.name, skin.id))
     sp.end()
 
-    out = os.path.join(BASE, "assets", "preview_all.png")
+    out = os.path.join(BASE, "assets",
+                       "preview_all.png" if lang == "zh" else "preview_all_en.png")
     sheet.save(out, "PNG")
     print("saved:", out, sheet.width(), "x", sheet.height())
     return 0

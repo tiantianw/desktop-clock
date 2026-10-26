@@ -13,6 +13,8 @@ import math
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QFont, QPainter, QPen
 
+from core import i18n
+
 
 # ---------------------------------------------------------------- 颜色与字体
 
@@ -177,6 +179,11 @@ def clock_angles(now, cfg):
 WEEKDAY_FULL = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
 WEEKDAY_SHORT = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 WEEKDAY_EN = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+WEEKDAY_SHORT_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+WEEKDAY_FULL_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                   "Saturday", "Sunday"]
+MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
 def hour_minute(now, cfg) -> str:
@@ -201,6 +208,9 @@ def meridiem(now) -> str:
 
 def date_text(now, cfg) -> str:
     fmt = cfg.get("content.date_format", "MM月DD日")
+    # 默认格式是中文的「10月25日」，英文界面下换成「Oct 25」
+    if i18n.is_en() and "月" in fmt:
+        return "%s %d" % (MONTHS_EN[now.month - 1], now.day)
     try:
         return fmt.replace("YYYY", "%04d" % now.year) \
                   .replace("MM", "%02d" % now.month) \
@@ -213,6 +223,12 @@ def weekday_text(now, cfg) -> str:
     mode = cfg.get("content.show_weekday", "short")
     if mode == "none":
         return ""
+    if i18n.is_en():
+        if mode == "full":
+            return WEEKDAY_FULL_EN[now.weekday()]
+        if mode == "en":
+            return WEEKDAY_EN[now.weekday()]
+        return WEEKDAY_SHORT_EN[now.weekday()]
     if mode == "full":
         return WEEKDAY_FULL[now.weekday()]
     if mode == "en":
@@ -234,11 +250,21 @@ def top_line(now, cfg) -> str:
 
 class Skin:
     id = "base"
-    name = "基础"
-    desc = ""
+    name_zh = "基础"
+    name_en = "Base"
+    desc_zh = ""
+    desc_en = ""
     wants_own_bg = False
     # "rect" 铺满整个内容区的圆角卡片；"circle" 只画圆形表盘，圆外完全透明
     shape = "rect"
+
+    @property
+    def name(self) -> str:
+        return self.name_en if i18n.is_en() else self.name_zh
+
+    @property
+    def desc(self) -> str:
+        return self.desc_en if i18n.is_en() else self.desc_zh
 
     def draw(self, p: QPainter, rect: QRectF, now, cfg) -> None:
         raise NotImplementedError

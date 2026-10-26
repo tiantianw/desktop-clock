@@ -38,11 +38,13 @@ def _boot() -> int:
     app.setQuitOnLastWindowClosed(False)
 
     from core.config import Config
+    from core import i18n
     from app.window import ClockWindow
     from app.tray import Tray
     from sysint.hotkey import HotkeyManager
 
     cfg = Config()
+    i18n.set_language(cfg.get("language", "zh"))
     state: dict = {"window": None, "dialog": None, "tray": None}
     hotkeys = HotkeyManager()
 
@@ -105,10 +107,19 @@ def _boot() -> int:
         except Exception:
             log_exception("rebuild_window")
 
+    def refresh_language() -> None:
+        try:
+            tray = state.get("tray")
+            if tray is not None:
+                tray.refresh_language()
+        except Exception:
+            log_exception("refresh_language")
+
     def bind(win: ClockWindow) -> None:
         win.request_settings.connect(open_settings)
         win.request_quit.connect(app.quit)
         win.request_rebuild.connect(rebuild_window)
+        win.request_language.connect(refresh_language)
 
     window = ClockWindow(cfg)
     bind(window)

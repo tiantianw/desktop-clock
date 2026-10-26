@@ -9,6 +9,8 @@ from PyQt5.QtCore import QPoint, QRectF, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter, QPainterPath
 from PyQt5.QtWidgets import QApplication, QMenu, QWidget
 
+from core import i18n
+from core.i18n import t
 from core.logger import log, log_exception
 from render import registry
 from render.base import color, is_dark
@@ -38,6 +40,7 @@ QMenu::indicator { width: 12px; height: 12px; }
 
 class ClockWindow(QWidget):
     request_settings = pyqtSignal()
+    request_language = pyqtSignal()
     request_quit = pyqtSignal()
     request_rebuild = pyqtSignal()
 
@@ -363,7 +366,7 @@ class ClockWindow(QWidget):
         menu = QMenu(self)
         menu.setStyleSheet(MENU_QSS)
 
-        skin_menu = menu.addMenu("皮肤")
+        skin_menu = menu.addMenu(t("皮肤", "Skin"))
         skin_menu.setStyleSheet(MENU_QSS)
         current_skin = self.cfg.get("skin", "glass")
         for sid, name in registry.skin_choices():
@@ -372,47 +375,47 @@ class ClockWindow(QWidget):
             act.setChecked(sid == current_skin)
             act.triggered.connect(lambda _=False, s=sid: self.set_skin(s))
 
-        layer_menu = menu.addMenu("层级")
+        layer_menu = menu.addMenu(t("层级", "Layer"))
         layer_menu.setStyleSheet(MENU_QSS)
         current_layer = self.cfg.get("layer", "topmost")
-        for key, label in (("topmost", "始终置顶"), ("normal", "普通窗口"), ("desktop", "桌面挂件层")):
+        for key, label in i18n.layer_choices():
             act = layer_menu.addAction(label)
             act.setCheckable(True)
             act.setChecked(key == current_layer)
             act.triggered.connect(lambda _=False, k=key: self.set_layer(k))
 
         menu.addSeparator()
-        sec_act = menu.addAction("显示秒")
+        sec_act = menu.addAction(t("显示秒", "Show seconds"))
         sec_act.setCheckable(True)
         sec_act.setChecked(self.cfg.get("content.show_seconds", True))
         sec_act.triggered.connect(lambda checked: self._toggle("content.show_seconds", checked))
 
-        h24_act = menu.addAction("24 小时制")
+        h24_act = menu.addAction(t("24 小时制", "24-hour clock"))
         h24_act.setCheckable(True)
         h24_act.setChecked(self.cfg.get("content.hour24", True))
         h24_act.triggered.connect(lambda checked: self._toggle("content.hour24", checked))
 
-        lunar_act = menu.addAction("显示农历/节气")
+        lunar_act = menu.addAction(t("显示农历/节气", "Show lunar date / solar term"))
         lunar_act.setCheckable(True)
         lunar_act.setChecked(self.cfg.get("content.show_lunar", False))
         lunar_act.triggered.connect(lambda checked: self._toggle("content.show_lunar", checked))
 
         menu.addSeparator()
-        lock_act = menu.addAction("锁定位置")
+        lock_act = menu.addAction(t("锁定位置", "Lock position"))
         lock_act.setCheckable(True)
         lock_act.setChecked(self.cfg.get("behavior.lock_position", False))
         lock_act.triggered.connect(lambda checked: self._toggle("behavior.lock_position", checked))
 
-        through_act = menu.addAction("点击穿透")
+        through_act = menu.addAction(t("点击穿透", "Click-through"))
         through_act.setCheckable(True)
         through_act.setChecked(self.cfg.get("behavior.click_through", False))
         through_act.triggered.connect(lambda checked: self._toggle("behavior.click_through", checked))
 
         menu.addSeparator()
-        menu.addAction("设置…").triggered.connect(self.request_settings.emit)
-        menu.addAction("重置到右上角").triggered.connect(self.reset_position)
+        menu.addAction(t("设置…", "Settings…")).triggered.connect(self.request_settings.emit)
+        menu.addAction(t("重置到右上角", "Reset to top-right")).triggered.connect(self.reset_position)
         menu.addSeparator()
-        menu.addAction("退出").triggered.connect(self.request_quit.emit)
+        menu.addAction(t("退出", "Quit")).triggered.connect(self.request_quit.emit)
         return menu
 
     def _toggle(self, path: str, value) -> None:

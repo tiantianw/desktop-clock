@@ -1,78 +1,53 @@
-"""生成应用图标（ico + png），供 exe 与托盘使用。"""
+"""生成应用图标（ico + png），供 exe 与托盘使用。
+
+ico 里每个尺寸都是**单独渲染**的，不是把 512px 缩下去 —— 16px 下缩放的
+结果是一团糊，单独画才能把笔画和刻度调到看得清。
+"""
 
 from __future__ import annotations
 
 import os
+import struct
 import sys
+import tempfile
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE)
+if BASE not in sys.path:
+    sys.path.insert(0, BASE)
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QColor, QPainter, QPen, QPixmap
+from PyQt5.QtCore import QBuffer, QByteArray, QIODevice
 from PyQt5.QtWidgets import QApplication
 
-SIZE = 512
+from app.icon import ICON_SIZES, draw_clock
+
+TEXT = "#2C2C2A"
+ACCENT = "#C08A4E"
+BG = "#FFFFFF"
 
 
-def draw() -> QPixmap:
-    pm = QPixmap(SIZE, SIZE)
-    pm.fill(Qt.transparent)
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.Antialiasing, True)
+def _png_bytes(pm) -> bytes:
+    buf = QBuffer()
+    buf.open(QIODevice.WriteOnly)
+    pm.save(buf, "PNG")
+    data = bytes(buf.data())
+    buf.close()
+    return data
 
-    margin = SIZE * 0.06
-    rect = QRectF(margin, margin, SIZE - margin * 2, SIZE - margin * 2)
-    radius = SIZE * 0.22
 
-    # 暖米底
-    p.setPen(Qt.NoPen)
-    p.setBrush(QColor("#F7F2E7"))
-    p.drawRoundedRect(rect, radius, radius)
-
-    c = QPointF(SIZE / 2, SIZE / 2)
-    r = SIZE * 0.31
-
-    # 表盘外圈
-    p.setPen(QPen(QColor("#2C2C2A"), SIZE * 0.045))
-    p.setBrush(QColor("#FFFDF8"))
-    p.drawEllipse(c, r, r)
-
-    # 刻度
-    for i in range(12):
-        p.save()
-        p.translate(c)
-        p.rotate(i * 30)
-        major = (i % 3 == 0)
-        p.setPen(QPen(QColor("#2C2C2A"), SIZE * (0.016 if major else 0.008)))
-        p.drawLine(QPointF(0, -r * 0.86), QPointF(0, -r * (0.72 if major else 0.79)))
-        p.restore()
-
-    # 10:10 指针
-    p.save()
-    p.translate(c)
-    p.rotate(305)
-    p.setPen(QPen(QColor("#2C2C2A"), SIZE * 0.030))
-    p.drawLine(QPointF(0, r * 0.10), QPointF(0, -r * 0.48))
-    p.restore()
-    p.save()
-    p.translate(c)
-    p.rotate(60)
-    p.setPen(QPen(QColor("#2C2C2A"), SIZE * 0.022))
-    p.drawLine(QPointF(0, r * 0.12), QPointF(0, -r * 0.68))
-    p.restore()
-    p.save()
-    p.translate(c)
-    p.rotate(190)
-    p.setPen(QPen(QColor("#C08A4E"), SIZE * 0.010))
-    p.drawLine(QPointF(0, r * 0.22), QPointF(0, -r * 0.78))
-    p.restore()
-
-    p.setPen(Qt.NoPen)
-    p.setBrush(QColor("#C08A4E"))
-    p.drawEllipse(c, SIZE * 0.028, SIZE * 0.028)
-    p.end()
-    return pm
+def save_ico(path: str, pixmaps) -> None:
+    """手写 ICO 容器，每帧放一张原生渲染的 PNG。"""
+    blobs = [_png_bytes(pm) for pm in pixmaps]
+    count = len(blobs)
+    header = struct.pack("<HHH", 0, 1, count)
+    offset = 6 + 16 * count
+    entries = b""
+    for pm, blob in zip(pixmaps, blobs):
+        w = 0 if pm.width() >= 256 else pm.width()
+        h = 0 if pm.height() >= 256 else pm.height()
+        entries += struct.pack("<BBBBHHII", w, h, 0, 0, 1, 32, len(blob), offset)
+        offset += len(blob)
+    with open(path, "wb") as fh:
+        fh.write(header + entries + b"".join(blobs))
 
 
 def main() -> int:
@@ -80,21 +55,21 @@ def main() -> int:
     assets = os.path.join(BASE, "assets")
     os.makedirs(assets, exist_ok=True)
 
-    pm = draw()
+    big = draw_clock(256, TEXT, ACCENT, BG)
     png = os.path.join(assets, "app.png")
-    pm.save(png, "PNG")
+    big.save(png, "PNG")
     print("png:", png)
 
-    # 用 PIL 生成多尺寸 ico
-    try:
-        from PIL import Image
-        img = Image.open(png).convert("RGBA")
-        ico = os.path.join(assets, "app.ico")
-        img.save(ico, format="ICO",
-                 sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-        print("ico:", ico)
-    except Exception as exc:
-        print("ico failed:", exc)
+    frames = [draw_clock(s, TEXT, ACCENT, BG) for s in ICON_SIZES]
+    ico = os.path.join(assets, "app.ico")
+    save_ico(ico, frames)
+    print("ico:", ico, "sizes:", ICON_SIZES)
+
+    # 把 16px 放大 8 倍存一张对照图，方便肉眼确认小图标是否清楚
+    prev = frames[0].scaled(128, 128)
+    out = os.path.join(tempfile.gettempdir(), "desktopclock_icon16.png")
+    prev.save(out, "PNG")
+    print("16px preview:", out)
     return 0
 
 

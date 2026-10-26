@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import datetime
 
+from core import i18n
+
 try:
     from zoneinfo import ZoneInfo
     _HAS_ZONEINFO = True
@@ -33,6 +35,26 @@ CITIES = [
 CITY_MAP = {c[0]: c for c in CITIES}
 DEFAULT_CITIES = ["tokyo", "london", "newyork"]
 
+# 英文界面下的城市名。香港、台北按中国城市写法标注。
+CITY_EN = {
+    "beijing": "Beijing",
+    "shanghai": "Shanghai",
+    "hongkong": "Hong Kong, China",
+    "taipei": "Taipei, China",
+    "tokyo": "Tokyo",
+    "seoul": "Seoul",
+    "singapore": "Singapore",
+    "dubai": "Dubai",
+    "moscow": "Moscow",
+    "paris": "Paris",
+    "london": "London",
+    "newyork": "New York",
+    "chicago": "Chicago",
+    "losangeles": "Los Angeles",
+    "sydney": "Sydney",
+    "saopaulo": "Sao Paulo",
+}
+
 
 def city_time(key: str, local_now: datetime.datetime) -> datetime.datetime | None:
     """把本地 naive 时间换算到目标城市。"""
@@ -60,7 +82,11 @@ def _local_offset(local_now: datetime.datetime) -> int:
 
 def city_label(key: str) -> str:
     info = CITY_MAP.get(key)
-    return info[1] if info else key
+    if info is None:
+        return key
+    if i18n.is_en():
+        return CITY_EN.get(key, info[2])
+    return info[1]
 
 
 def city_abbr(key: str) -> str:
