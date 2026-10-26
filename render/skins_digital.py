@@ -14,8 +14,10 @@ from render.base import (
 
 class GlassSkin(Skin):
     id = "glass"
-    name = "玻璃极简"
-    desc = "大号等宽数字 + 秒进度条，浅色壁纸上最干净"
+    name_zh = "玻璃极简"
+    name_en = "Glass Minimal"
+    desc_zh = "大号等宽数字 + 秒进度条，浅色壁纸上最干净"
+    desc_en = "Big monospaced digits with a second bar. Cleanest look on light wallpapers."
 
     def draw(self, p, rect, now, cfg):
         w = min(rect.width(), rect.height())
@@ -63,8 +65,10 @@ class GlassSkin(Skin):
 
 class NeonSkin(Skin):
     id = "neon"
-    name = "霓虹线框"
-    desc = "暗底发光圆环与数字，深色壁纸上最出彩"
+    name_zh = "霓虹线框"
+    name_en = "Neon Ring"
+    desc_zh = "暗底发光圆环与数字，深色壁纸上最出彩"
+    desc_en = "Glowing ring and digits on a dark plate. Best on dark wallpapers."
     wants_own_bg = True
 
     def _glow_text(self, p, rect, text, font, base: QColor):
@@ -141,8 +145,10 @@ class NeonSkin(Skin):
 
 class TerminalSkin(Skin):
     id = "terminal"
-    name = "终端"
-    desc = "等宽绿字、命令行风格，带闪烁光标"
+    name_zh = "终端"
+    name_en = "Terminal"
+    desc_zh = "等宽绿字、命令行风格，带闪烁光标"
+    desc_en = "Monospaced green text, command-line style, blinking cursor."
     wants_own_bg = True
 
     def draw(self, p, rect, now, cfg):
@@ -200,8 +206,10 @@ class TerminalSkin(Skin):
 
 class SplitSkin(Skin):
     id = "split"
-    name = "三栏分割"
-    desc = "时 / 分 / 秒 三个独立方块，信息密度高"
+    name_zh = "三栏分割"
+    name_en = "Three Columns"
+    desc_zh = "时 / 分 / 秒 三个独立方块，信息密度高"
+    desc_en = "Hour, minute and second in three separate blocks."
 
     def draw(self, p, rect, now, cfg):
         w = min(rect.width(), rect.height())

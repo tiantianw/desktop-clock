@@ -16,8 +16,10 @@ from render.base import (
 
 class RingSkin(Skin):
     id = "ring"
-    name = "同心圆环"
-    desc = "三段圆弧分别表示时 / 分 / 秒，中心读数字"
+    name_zh = "同心圆环"
+    name_en = "Concentric Rings"
+    desc_zh = "三段圆弧分别表示时 / 分 / 秒，中心读数字"
+    desc_en = "Three arcs for hour, minute and second, digits in the middle."
 
     def draw(self, p, rect, now, cfg):
         w = min(rect.width(), rect.height())
@@ -61,8 +63,10 @@ class RingSkin(Skin):
 
 class SegmentSkin(Skin):
     id = "segment"
-    name = "分段刻度环"
-    desc = "60 格刻度环，已走过的秒逐格点亮"
+    name_zh = "分段刻度环"
+    name_en = "Segment Ring"
+    desc_zh = "60 格刻度环，已走过的秒逐格点亮"
+    desc_en = "A 60-segment ring that lights up one cell per second."
 
     def draw(self, p, rect, now, cfg):
         w = min(rect.width(), rect.height())
@@ -103,8 +107,10 @@ class SegmentSkin(Skin):
 
 class FlipSkin(Skin):
     id = "flip"
-    name = "机械翻页"
-    desc = "深色翻页卡片，经典机场翻牌钟质感"
+    name_zh = "机械翻页"
+    name_en = "Flip Clock"
+    desc_zh = "深色翻页卡片，经典机场翻牌钟质感"
+    desc_en = "Dark flip cards, classic airport split-flap look."
     wants_own_bg = True
 
     def draw(self, p, rect, now, cfg):
@@ -177,8 +183,10 @@ class FlipSkin(Skin):
 
 class WorldSkin(Skin):
     id = "world"
-    name = "世界时钟"
-    desc = "主时间 + 最多 4 个城市，出差跨时区必备"
+    name_zh = "世界时钟"
+    name_en = "World Clock"
+    desc_zh = "主时间 + 最多 4 个城市，出差跨时区必备"
+    desc_en = "Local time plus up to four cities."
 
     def draw(self, p, rect, now, cfg):
         w = min(rect.width(), rect.height())
