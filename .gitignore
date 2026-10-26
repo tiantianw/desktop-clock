@@ -15,9 +15,11 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
-# 调试截图（保留皮肤总览图，其余是排查过程的临时产物）
+# 调试截图（排查过程的临时产物）
 build_tools/*.png
-!build_tools/preview_all.png
+
+# 个人版详细说明，含本机路径等信息，不随仓库发布
+使用说明.md
 
 # 编辑器 / 系统
 .vscode/
