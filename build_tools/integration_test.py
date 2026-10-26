@@ -10,8 +10,10 @@ import sys
 import time
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PYW = r"C:\ProgramData\Anaconda3\pythonw.exe"
-PY = r"C:\ProgramData\Anaconda3\python.exe"
+PY = sys.executable
+PYW = os.path.join(os.path.dirname(PY), "pythonw.exe")
+if not os.path.exists(PYW):
+    PYW = PY
 CONFIG = os.path.join(BASE, "config.json")
 OUT = os.path.join(BASE, "build_tools")
 
