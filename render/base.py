@@ -78,6 +78,39 @@ def is_dark(c: QColor) -> bool:
     return (c.red() * 299 + c.green() * 587 + c.blue() * 114) / 1000.0 < 128
 
 
+# ---------------------------------------------------------------- 比例倍数
+
+SCALE_MIN = 0.5
+SCALE_MAX = 3.0
+
+
+def _scale(cfg, path: str) -> float:
+    """读取 0.5–3.0 的倍数设置，非法值一律回落到 1.0。"""
+    try:
+        v = float(cfg.get(path, 1.0))
+    except Exception:
+        return 1.0
+    if v != v:  # NaN
+        return 1.0
+    return max(SCALE_MIN, min(SCALE_MAX, v))
+
+
+def hand_scale(cfg) -> float:
+    """指针粗细倍数：只作用于时针/分针/秒针的线宽与中心轴帽。"""
+    return _scale(cfg, "appearance.hand_scale")
+
+
+def dial_scale(cfg) -> float:
+    """表盘倍数：作用于刻度线的宽度与长度、以及表盘数字的字号。"""
+    return _scale(cfg, "appearance.dial_scale")
+
+
+def tick_inner(outer: float, inner: float, ds: float, floor: float = 0.58) -> float:
+    """按 ds 倍数把刻度往里延长，但不越过 floor 半径，免得戳到数字上。"""
+    return max(floor, outer - (outer - inner) * ds)
+
+
+
 # ---------------------------------------------------------------- 绘制工具
 
 def draw_text(p: QPainter, rect: QRectF, text: str, font: QFont, fill: QColor,
@@ -204,6 +237,8 @@ class Skin:
     name = "基础"
     desc = ""
     wants_own_bg = False
+    # "rect" 铺满整个内容区的圆角卡片；"circle" 只画圆形表盘，圆外完全透明
+    shape = "rect"
 
     def draw(self, p: QPainter, rect: QRectF, now, cfg) -> None:
         raise NotImplementedError

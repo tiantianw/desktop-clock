@@ -2,6 +2,11 @@
 /dist/
 /build/
 /.cache/
+# 临时打包目录（换个名字重打包时留下的）
+/dist_x/
+/dist_y/
+/build_x/
+/build_y/
 
 # 本地打包虚拟环境
 .venvbuild/

@@ -1,4 +1,4 @@
-"""离屏渲染 12 套皮肤，生成一张对比图用于检查绘制效果。
+"""离屏渲染全部皮肤，生成一张对比图用于检查绘制效果。
 
 用法：python build_tools/render_preview.py
 """
@@ -34,7 +34,8 @@ def render_one(cfg, skin, size: int, wall: QColor) -> QPixmap:
         p.setRenderHint(QPainter.Antialiasing, True)
         p.setRenderHint(QPainter.TextAntialiasing, True)
         rect = QRectF(0, 0, size, size)
-        radius = float(cfg.get("appearance.radius", 18))
+        circle = getattr(skin, "shape", "rect") == "circle"
+        radius = size / 2.0 if circle else float(cfg.get("appearance.radius", 18))
 
         # 阴影
         if cfg.get("appearance.shadow", True):
@@ -61,9 +62,12 @@ def render_one(cfg, skin, size: int, wall: QColor) -> QPixmap:
                     p.setPen(Qt.NoPen)
                 p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius)
 
-        path = QPainterPath()
-        path.addRoundedRect(rect, radius, radius)
-        p.setClipPath(path)
+        if circle:
+            p.setClipRect(rect)
+        else:
+            path = QPainterPath()
+            path.addRoundedRect(rect, radius, radius)
+            p.setClipPath(path)
         skin.draw(p, rect, datetime.datetime.now(), cfg)
     finally:
         p.end()
@@ -99,7 +103,7 @@ def main() -> int:
                     "%s  (%s)" % (skin.name, skin.id))
     sp.end()
 
-    out = os.path.join(BASE, "build_tools", "preview_all.png")
+    out = os.path.join(BASE, "assets", "preview_all.png")
     sheet.save(out, "PNG")
     print("saved:", out, sheet.width(), "x", sheet.height())
     return 0

@@ -163,6 +163,7 @@ class SettingsDialog(QDialog):
         self._loading = True
         self._skin_buttons: dict[str, QToolButton] = {}
         self._bg_widgets: list = []
+        self._radius_slider = None
 
         self.setWindowTitle("桌面时钟 · 设置")
         self.setMinimumSize(780, 660)
@@ -237,6 +238,47 @@ class SettingsDialog(QDialog):
         self._row(form, label, holder)
         return slider
 
+    def _scale_row(self, form, label, value, on_change):
+        """0.5–3.0 的倍数滑杆，0.1 一档，右侧带一个「1.0」复位按钮。"""
+        holder = QWidget()
+        lay = QHBoxLayout(holder)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
+
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(5, 30)
+        slider.setSingleStep(1)
+        slider.setPageStep(2)
+        try:
+            slider.setValue(int(round(float(value) * 10)))
+        except Exception:
+            slider.setValue(10)
+
+        value_label = QLabel("%.1f×" % (slider.value() / 10.0))
+        value_label.setFixedWidth(42)
+        value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        value_label.setStyleSheet("color:#8A8175;font-family:Consolas;font-size:11px;")
+
+        btn_one = QPushButton("1.0")
+        btn_one.setFixedWidth(40)
+        btn_one.setToolTip("恢复默认 1.0×")
+        btn_one.setCursor(Qt.PointingHandCursor)
+        btn_one.clicked.connect(lambda: slider.setValue(10))
+
+        def _changed(v):
+            value_label.setText("%.1f×" % (v / 10.0))
+            on_change(v / 10.0)
+
+        slider.valueChanged.connect(_changed)
+        # 拖拽时只重绘时钟，松手后才重画 13 张缩略图，否则会卡
+        slider.sliderReleased.connect(self.refresh_thumbs)
+
+        lay.addWidget(slider, 1)
+        lay.addWidget(value_label)
+        lay.addWidget(btn_one)
+        self._row(form, label, holder)
+        return slider
+
     def _apply(self) -> None:
         if self._loading:
             return
@@ -265,9 +307,19 @@ class SettingsDialog(QDialog):
     def _sync_dependent(self) -> None:
         skin = registry.get_skin(self.cfg.get("skin", "glass"))
         own_bg = skin.wants_own_bg
+        circle = getattr(skin, "shape", "rect") == "circle"
         for w in self._bg_widgets:
             w.setEnabled(not own_bg)
-        self.bg_hint.setVisible(own_bg)
+        if own_bg:
+            self.bg_hint.setText("当前皮肤自带底色，背景相关设置对它不生效")
+            self.bg_hint.setVisible(True)
+        elif circle:
+            self.bg_hint.setText("圆形表盘不支持毛玻璃（模糊会糊出方块），选它会自动按填充处理")
+            self.bg_hint.setVisible(True)
+        else:
+            self.bg_hint.setVisible(False)
+        if self._radius_slider is not None:
+            self._radius_slider.setEnabled(not circle)
 
     # ------------------------------------------------------------ 皮肤页
 
@@ -323,14 +375,18 @@ class SettingsDialog(QDialog):
             p.setRenderHint(QPainter.Antialiasing, True)
             p.setRenderHint(QPainter.TextAntialiasing, True)
             rect = QRectF(1, 1, THUMB - 2, THUMB - 2)
-            radius = 9.0
+            circle = getattr(skin, "shape", "rect") == "circle"
+            radius = rect.width() / 2.0 if circle else 9.0
             if not skin.wants_own_bg:
                 p.setPen(QPen(QColor(self.cfg.get("appearance.border_color", "#E7DFD2")), 1))
                 p.setBrush(QColor(self.cfg.get("appearance.bg_color", "#FAF6EE")))
                 p.drawRoundedRect(rect, radius, radius)
-            path = QPainterPath()
-            path.addRoundedRect(rect, radius, radius)
-            p.setClipPath(path)
+            if circle:
+                p.setClipRect(rect)
+            else:
+                path = QPainterPath()
+                path.addRoundedRect(rect, radius, radius)
+                p.setClipPath(path)
             skin.draw(p, rect, datetime.datetime.now(), self.cfg)
         except Exception:
             log_exception("render_thumb")
@@ -373,8 +429,9 @@ class SettingsDialog(QDialog):
         f1.setHorizontalSpacing(12)
         self._slider_row(f1, "时钟大小", 80, 600, self.cfg.get("geometry.size", 220),
                          lambda v: self._set("geometry.size", v))
-        self._slider_row(f1, "圆角", 0, 40, self.cfg.get("appearance.radius", 18),
-                         lambda v: self._set("appearance.radius", v))
+        self._radius_slider = self._slider_row(f1, "圆角", 0, 40,
+                                               self.cfg.get("appearance.radius", 18),
+                                               lambda v: self._set("appearance.radius", v))
         lay.addWidget(box_size)
 
         box_color = QGroupBox("配色")
@@ -477,6 +534,26 @@ class SettingsDialog(QDialog):
             lambda: self._set("appearance.dial_style", self.dial_combo.currentData()))
         self._row(f4, "表盘数字", self.dial_combo)
         lay.addWidget(box_font)
+
+        box_stroke = QGroupBox("指针与刻度")
+        f5 = QFormLayout(box_stroke)
+        f5.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        f5.setHorizontalSpacing(12)
+
+        self.hand_slider = self._scale_row(
+            f5, "指针粗细", self.cfg.get("appearance.hand_scale", 1.0),
+            lambda v: self._set("appearance.hand_scale", v))
+        self.dial_slider = self._scale_row(
+            f5, "表盘刻度", self.cfg.get("appearance.dial_scale", 1.0),
+            lambda v: self._set("appearance.dial_scale", v))
+
+        stroke_hint = QLabel("1.0 为默认，0.1 一档，范围 0.5–3.0。表盘刻度只影响指针类皮肤"
+                             "（经典指针 / 经典挂钟 / 罗马指针 / 极简刻度盘 / 双表盘）的刻度与数字。")
+        stroke_hint.setWordWrap(True)
+        stroke_hint.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        stroke_hint.setStyleSheet("color:#9C9285;font-size:11px;")
+        f5.addRow("", stroke_hint)
+        lay.addWidget(box_stroke)
 
         lay.addStretch(1)
         scroll.setWidget(inner)
@@ -702,6 +779,8 @@ class SettingsDialog(QDialog):
             self.btn_text.set_color(self.cfg.get("appearance.text_color"))
             self.btn_accent.set_color(self.cfg.get("appearance.accent"))
             self.btn_border.set_color(self.cfg.get("appearance.border_color"))
+            self.hand_slider.setValue(10)
+            self.dial_slider.setValue(10)
             ti = self.theme_combo.findData("warm")
             self.theme_combo.setCurrentIndex(max(0, ti))
             for sid, btn in self._skin_buttons.items():

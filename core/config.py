@@ -45,6 +45,8 @@ DEFAULTS = {
         "border": True,
         "border_color": "#E7DFD2",
         "dial_style": "arabic",
+        "hand_scale": 1.0,
+        "dial_scale": 1.0,
     },
     "content": {
         "hour24": True,

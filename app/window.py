@@ -170,17 +170,28 @@ class ClockWindow(QWidget):
             p.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
             content = self._content_rect()
-            radius = float(self.cfg.get("appearance.radius", 18))
             skin = registry.get_skin(self.cfg.get("skin", "glass"))
+            circle = getattr(skin, "shape", "rect") == "circle"
+            # 圆形皮肤：把圆角半径顶到半边宽，圆角矩形就退化成正圆，
+            # 背景和投影都自然变成圆形，圆外不再有任何着色。
+            if circle:
+                radius = content.width() / 2.0
+            else:
+                radius = float(self.cfg.get("appearance.radius", 18))
 
             self._paint_shadow(p, content, radius)
             if not skin.wants_own_bg:
-                self._paint_background(p, content, radius)
+                self._paint_background(p, content, radius, circle)
 
-            path = QPainterPath()
-            path.addRoundedRect(content, radius, radius)
             p.save()
-            p.setClipPath(path)
+            if circle:
+                # 注意不要裁成圆：Qt 的裁剪路径是硬边的，会把表盘边缘啃出锯齿。
+                # 皮肤自己画的圆正好内切于内容区，只按方框裁掉溢出即可。
+                p.setClipRect(content)
+            else:
+                path = QPainterPath()
+                path.addRoundedRect(content, radius, radius)
+                p.setClipPath(path)
             skin.draw(p, content, datetime.datetime.now(), self.cfg)
             p.restore()
             p.end()
@@ -205,19 +216,24 @@ class ClockWindow(QWidget):
             p.drawRoundedRect(rect.adjusted(-grow, -grow, grow, grow),
                               radius + grow, radius + grow)
 
-    def _paint_background(self, p: QPainter, rect: QRectF, radius: float) -> None:
+    def _paint_background(self, p: QPainter, rect: QRectF, radius: float,
+                          circle: bool = False) -> None:
         mode = self.cfg.get("appearance.bg_mode", "solid")
         if mode == "none":
             return
+        if mode == "blur" and circle:
+            # 模糊作用于整个窗口矩形，圆形皮肤下会糊出一个方块，退回填充
+            mode = "solid"
         bg = color(self.cfg, "bg")
         opacity = int(self.cfg.get("appearance.bg_opacity", 92))
         if mode == "blur":
             opacity = min(opacity, 55)
         bg.setAlpha(max(0, min(255, int(opacity * 255 / 100))))
         p.setBrush(bg)
-        if self.cfg.get("appearance.border", True) and mode != "none":
+        if self.cfg.get("appearance.border", True):
             p.setPen(color(self.cfg, "border", 150))
-            p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius)
+            r = max(0.0, radius - 0.5)
+            p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), r, r)
         else:
             p.setPen(Qt.NoPen)
             p.drawRoundedRect(rect, radius, radius)
@@ -502,7 +518,9 @@ class ClockWindow(QWidget):
         try:
             if not self._hwnd:
                 return
-            want = self.cfg.get("appearance.bg_mode", "solid") == "blur"
+            skin = registry.get_skin(self.cfg.get("skin", "glass"))
+            circle = getattr(skin, "shape", "rect") == "circle"
+            want = self.cfg.get("appearance.bg_mode", "solid") == "blur" and not circle
             if want == self._blur_on:
                 return
             abgr = win32.hex_to_abgr(self.cfg.get("appearance.bg_color", "#FAF6EE"), 0xAA)
