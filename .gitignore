@@ -5,8 +5,10 @@
 # 临时打包目录（换个名字重打包时留下的）
 /dist_x/
 /dist_y/
+/dist_z/
 /build_x/
 /build_y/
+/build_z/
 
 # 本地打包虚拟环境
 .venvbuild/
